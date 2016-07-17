@@ -4,6 +4,9 @@ import android.content.Context;
 
 import com.example.user.im.entity.Message;
 import com.j256.ormlite.dao.Dao;
+import com.j256.ormlite.stmt.DeleteBuilder;
+import com.j256.ormlite.stmt.QueryBuilder;
+import com.j256.ormlite.stmt.Where;
 
 import java.sql.SQLException;
 import java.util.List;
@@ -36,10 +39,47 @@ public class MessageDao {
     public void addMessage(Message message) {
         try {
             dao.create(message);
+            //更新conversation
+            ConversationDao conversationDao = new ConversationDao(context);
+            conversationDao.syncConversation(message);
         } catch (SQLException e) {
             e.printStackTrace();
         }
     }
+
+    public void addMessage(List<Message> messages){
+        try {
+            //网络加载新的30数据,防止加载遗漏网络上的数据
+            if(queryById(messages.get(0).get_id()).get_id() == null){
+                deleteOldMessage(messages.get(0));
+            }
+
+            for (Message message:messages) {
+                dao.create(message);
+            }
+            //更新最新的conversation
+            ConversationDao conversationDao = new ConversationDao(context);
+            conversationDao.syncConversation(messages.get(0));
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * 删除旧的数据
+     * @param message
+     */
+    public void deleteOldMessage(Message message) throws SQLException{
+        DeleteBuilder<Message,Integer> deleteBuilder = dao.deleteBuilder();
+        Where where = deleteBuilder.where();
+        where.in("senderId", message.getReceiverId(), message.getSenderId());
+        where.and();
+        where.in("receiverId", message.getReceiverId(), message.getSenderId());
+        where.and();
+        where.lt("timestamp", message.getTimestamp()); //&和小于
+        deleteBuilder.delete();
+    }
+
 
     /**
      * 删
@@ -75,15 +115,30 @@ public class MessageDao {
         return null;
     }
 
+    public List<Message> queryBySendAndReceiveId(String sendId,String receiveId,long timestamp) throws SQLException{
+        QueryBuilder queryBuilder = dao.queryBuilder();
+        queryBuilder.orderBy(Message.TIMESTAMP,true); //降
+        Where where = queryBuilder.where();
+        where.in("senderId", sendId, receiveId);
+        where.and();
+        where.in("receiverId",sendId,receiveId);
+        if(timestamp != 0){
+            where.and();
+            where.lt("timestamp",timestamp); //什么意思
+        }
+        queryBuilder.limit(30);
+        return where.query();
+    }
+
     /**
      * 根据id查询
      * 获取的User信息只有id
      * @param id
      * @return
      */
-    public Message queryById(int id) {
+    public Message queryById(String  id) {
         try {
-            return (Message) dao.queryForId(new Integer(id));
+            return (Message) dao.queryForId(Integer.parseInt(id));
         } catch (SQLException e) {
             e.printStackTrace();
         }

@@ -3,7 +3,9 @@ package com.example.user.im.db;
 import android.content.Context;
 
 import com.example.user.im.entity.Conversation;
+import com.example.user.im.entity.Message;
 import com.j256.ormlite.dao.Dao;
+import com.j256.ormlite.stmt.QueryBuilder;
 
 import java.sql.SQLException;
 import java.util.List;
@@ -63,6 +65,12 @@ public class ConversationDao {
         }
     }
 
+    public List<Conversation> queryAllByTimeDesc() throws SQLException{
+        QueryBuilder queryBuilder = dao.queryBuilder();
+        queryBuilder.orderBy(Conversation.TIMESTAMP, false);
+        return queryBuilder.query();
+    }
+
     /**
      * 查询所有
      */
@@ -78,42 +86,43 @@ public class ConversationDao {
     /**
      * 根据id查询
      * 获取的User信息只有id
-     * @param id
+     *
      * @return
      */
-    public Conversation queryById(int id) {
+    public Conversation queryByTargetId(String targetId) {
         try {
-            return (Conversation) dao.queryForId(new Integer(id));
+            return dao.queryBuilder().where().eq("targetId", targetId).queryForFirst();
         } catch (SQLException e) {
             e.printStackTrace();
         }
         return null;
     }
 
-
-//    /**
-//     * 获取People以及其属性User的详细信息
-//     * @param id
-//     * @return
-//     */
-//    public Conversation queryWithUserById(int id) {
-//        Conversation people = null;
-//        try {
-//            people = (Conversation) dao.queryForId(new Integer(id));
-//            sqlLiteHelper.getDao(User.class).refresh(people.getUser()); //同步
-//            return people;
-//        } catch (SQLException e) {
-//            e.printStackTrace();
-//        }
-//        return null;
-//    }
-
-    public List<Conversation> queryByUserId(int userId){
+    public List<Conversation> queryByUserId(int userId) {
         try {
             return dao.queryBuilder().where().eq("user_id", userId).query();
         } catch (SQLException e) {
             e.printStackTrace();
         }
         return null;
+    }
+
+    /**
+     * 根据Message同步Conversation
+     *
+     * @param message
+     */
+    public void syncConversation(Message message) {
+        Conversation conversation = message.copyTo(context);
+        addConversation(conversation);
+    }
+
+    /**
+     * 清空unreadNum
+     * @param targetId
+     */
+    public void markAsRead(String targetId) throws SQLException{
+        //TODO  执行sql
+        dao.executeRaw("update tb_conversation set"+Conversation.UNREADNUM+"=0" +"where targetId = ?",targetId);
     }
 }

@@ -1,5 +1,9 @@
 package com.example.user.im.entity;
 
+import android.content.Context;
+
+import com.example.user.im.db.ConversationDao;
+import com.example.user.im.IMApplication;
 import com.j256.ormlite.field.DatabaseField;
 import com.j256.ormlite.table.DatabaseTable;
 
@@ -14,20 +18,22 @@ import java.io.Serializable;
  */
 @DatabaseTable(tableName = "tb_message")
 public class Message implements Serializable {
+    public static String TIMESTAMP="timeStamp";
+
     @DatabaseField(id = true)
-    private String string_id;
+    private String _id;
     @DatabaseField
     private String senderId;
     @DatabaseField
-    private String senderName;
+    private String sender_name;
     @DatabaseField
-    private String senderPicture;
+    private String sender_picture;
     @DatabaseField
     private String receiverId;
     @DatabaseField
-    private String receiverName;
+    private String receiver_name;
     @DatabaseField
-    private String receiverPicture;
+    private String receiver_picture;
     @DatabaseField
     private MessageType messageType;
     @DatabaseField
@@ -35,24 +41,25 @@ public class Message implements Serializable {
     @DatabaseField
     private MessageStatus messageStatus;
     @DatabaseField
-    private long timeStamp;
+    private long timestamp;
     @DatabaseField
     private boolean isRead;
     private int percent;   //没有加入数据库
 
     public Message(){}
 
-    public Message(String string_id,String content){
-        this.string_id = string_id;
+    public Message(String _id,String content){
+        this._id = _id;
         this.content = content;
     }
 
-    public String getString_id() {
-        return string_id;
+
+    public String get_id() {
+        return _id;
     }
 
-    public void setString_id(String string_id) {
-        this.string_id = string_id;
+    public void set_id(String _id) {
+        this._id = _id;
     }
 
     public String getSenderId() {
@@ -63,20 +70,45 @@ public class Message implements Serializable {
         this.senderId = senderId;
     }
 
-    public String getSenderName() {
-        return senderName;
+
+    public String getSender_name() {
+        return sender_name;
     }
 
-    public void setSenderName(String senderName) {
-        this.senderName = senderName;
+    public void setSender_name(String sender_name) {
+        this.sender_name = sender_name;
     }
 
-    public String getSenderPicture() {
-        return senderPicture;
+    public String getSender_picture() {
+        return sender_picture;
     }
 
-    public void setSenderPicture(String senderPicture) {
-        this.senderPicture = senderPicture;
+    public void setSender_picture(String sender_picture) {
+        this.sender_picture = sender_picture;
+    }
+
+    public String getReceiver_picture() {
+        return receiver_picture;
+    }
+
+    public void setReceiver_picture(String receiver_picture) {
+        this.receiver_picture = receiver_picture;
+    }
+
+    public String getReceiver_name() {
+        return receiver_name;
+    }
+
+    public void setReceiver_name(String receiver_name) {
+        this.receiver_name = receiver_name;
+    }
+
+    public long getTimestamp() {
+        return timestamp;
+    }
+
+    public void setTimestamp(long timestamp) {
+        this.timestamp = timestamp;
     }
 
     public String getReceiverId() {
@@ -87,21 +119,7 @@ public class Message implements Serializable {
         this.receiverId = receiverId;
     }
 
-    public String getReceiverName() {
-        return receiverName;
-    }
 
-    public void setReceiverName(String receiverName) {
-        this.receiverName = receiverName;
-    }
-
-    public String getReceiverPicture() {
-        return receiverPicture;
-    }
-
-    public void setReceiverPicture(String receiverPicture) {
-        this.receiverPicture = receiverPicture;
-    }
 
     public MessageType getMessageType() {
         return messageType;
@@ -127,13 +145,7 @@ public class Message implements Serializable {
         this.messageStatus = messageStatus;
     }
 
-    public long getTimeStamp() {
-        return timeStamp;
-    }
 
-    public void setTimeStamp(long timeStamp) {
-        this.timeStamp = timeStamp;
-    }
 
     public boolean isRead() {
         return isRead;
@@ -149,5 +161,44 @@ public class Message implements Serializable {
 
     public void setPercent(int percent) {
         this.percent = percent;
+    }
+
+    public String toString(){
+        return "sendId="+senderId+"sendName="+sender_name+"receiverId="+receiverId+"receiverName="+receiver_name;
+    }
+
+    /**
+     * Message转换为Conversation
+     * @return
+     */
+    public Conversation copyTo(Context context){
+        Conversation conversation = new Conversation();
+        conversation.setContent(getContent());
+        conversation.setType(getMessageType());
+        conversation.setMessageStatus(getMessageStatus());
+        conversation.setTimestamp(getTimestamp());
+
+        if(getSenderId().equals(IMApplication.self_id)){
+            conversation.setTargetId(getReceiverId());
+            conversation.setTargetName(getReceiver_name());
+            conversation.setTargetPicture(getReceiver_picture());
+            ConversationDao conversationDao = new ConversationDao(context);
+            Conversation tmp = conversationDao.queryByTargetId(getSenderId());
+            conversation.setUnReadNum(tmp == null ? 1 : tmp.getUnReadNum());
+
+        }else{
+            conversation.setTargetId(getSenderId());
+            conversation.setTargetName(getSender_name());
+            conversation.setTargetPicture(getSender_picture());
+            ConversationDao conversationDao = new ConversationDao(context);
+            Conversation tmp = conversationDao.queryByTargetId(getSenderId());
+            if(tmp ==null){
+                conversation.setUnReadNum(1);
+            }else{
+                conversation.setUnReadNum(tmp.getUnReadNum()+1);
+            }
+
+        }
+        return conversation;
     }
 }

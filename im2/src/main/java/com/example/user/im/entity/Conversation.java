@@ -16,6 +16,8 @@ import java.io.Serializable;
  */
 @DatabaseTable(tableName = "tb_conversation")
 public class Conversation implements Serializable{
+    public static String TIMESTAMP = "timestamp";
+    public static String UNREADNUM="unReadNum";
     @DatabaseField(id = true)  //表示一条记录的唯一标识
     private String  targetId;
     @DatabaseField
@@ -102,5 +104,20 @@ public class Conversation implements Serializable{
 
     public void setTimestamp(long timestamp) {
         this.timestamp = timestamp;
+    }
+
+
+    /**
+     * 重写hashCode和equals 用于比较两个对象是否相同
+     * @return
+     */
+    @Override
+    public int hashCode() {
+        return targetId.hashCode();
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        return hashCode()==o.hashCode();
     }
 }
